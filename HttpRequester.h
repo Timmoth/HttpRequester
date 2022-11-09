@@ -4,104 +4,128 @@
 #include <WiFiClientSecure.h>
 #include "HttpResponse.h"
 
-class HttpRequester {
+class HttpRequester
+{
 public:
-  WiFiClientSecure* client;
+  WiFiClientSecure *client;
   HTTPClient https;
 
   String Host;
   int Port;
   String Path;
 
-  HttpRequester() {
+  HttpRequester()
+  {
     client = new WiFiClientSecure;
   }
 
-  ~HttpRequester() {
+  ~HttpRequester()
+  {
     https.end();
     delete client;
   }
 
-  bool Setup(String host, int port) {
-    if (!client) {
+  bool Setup(String host, int port)
+  {
+    if (!client)
+    {
       Serial.println("Unable to create client");
       return false;
     }
 
     client->setInsecure();
 
-    if (!https.begin(*client, host, port, "/", true)) {
-      Serial.println("Unable to connect to server");
-      return false;
-    }
-
     Host = host;
     Port = port;
     Path = "/";
 
-    https.setReuse(true);
-
     return true;
   }
 
-  HttpResponse* Get(String path) {
-    if (!client) {
-      Serial.println("Not connected to server");
+  HttpResponse *Get(String path)
+  {
+    return Send("GET", path);
+  }
+
+  HttpResponse *Post(String path, String body, String contentType)
+  {
+    return Send("POST", path, body, contentType);
+  }
+
+  HttpResponse *Put(String path, String body, String contentType)
+  {
+    return Send("PUT", path, body, contentType);
+  }
+
+  HttpResponse *Delete(String path)
+  {
+    return Send("DELETE", path);
+  }
+
+private:
+  HttpResponse *Send(const char *method, String path)
+  {
+    if (!Begin(path))
+    {
       return NULL;
     }
 
-    if (path != Path || !https.connected()) {
-      Path = path;
-      if (!https.begin(Host, Port, Path, true)) {
-        Serial.println("Not connected to server");
-        return NULL;
-      }
-    }
+    int statusCode = https.sendRequest(method);
+    Serial.println(String(method) + " " + path + " " + String(statusCode));
 
-    int statusCode = https.GET();
+    HttpResponse *response = new HttpResponse(statusCode);
 
-    Serial.println("GET " + path + " " + String(statusCode));
-
-    HttpResponse* response = new HttpResponse();
-
-    response->StatusCode = statusCode;
-
-    if (statusCode >= 200 && statusCode <= 299) {
+    if (response->IsSuccess())
+    {
       response->Body = https.getString();
     }
 
     return response;
   }
 
-  HttpResponse* Post(String path, String body, String contentType) {
-    if (!client) {
-      Serial.println("Not connected to server");
+  HttpResponse *Send(const char *method, String path, String body, String contentType)
+  {
+    if (!Begin(path))
+    {
       return NULL;
-    }
-
-    if (path != Path || !https.connected()) {
-      Path = path;
-      if (!https.begin(Host, Port, Path, true)) {
-        Serial.println("Not connected to server");
-        return NULL;
-      }
     }
 
     https.addHeader("Content-Type", contentType, false, true);
 
-    int statusCode = https.POST(body);
+    int statusCode = https.sendRequest(method, body);
+    Serial.println(String(method) + " " + path + " " + String(statusCode));
 
-    Serial.println("POST " + path + " " + String(statusCode));
+    HttpResponse *response = new HttpResponse(statusCode);
 
-    HttpResponse* response = new HttpResponse();
-
-    response->StatusCode = statusCode;
-
-    if (statusCode >= 200 && statusCode <= 299) {
+    if (response->IsSuccess())
+    {
       response->Body = https.getString();
     }
 
     return response;
+  }
+
+  bool Begin(String path)
+  {
+    if (!client)
+    {
+      Serial.println("Not connected to server");
+      return false;
+    }
+
+    if (path != Path || !https.connected())
+    {
+      Path = path;
+      if (!https.begin(*client, Host, Port, Path, true))
+      {
+        Serial.println("Not connected to server");
+        return false;
+      }
+      
+      https.setReuse(true);
+    }
+
+    return true;
   }
 };
 #endif

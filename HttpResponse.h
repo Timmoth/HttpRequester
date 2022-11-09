@@ -6,8 +6,12 @@ public:
   int StatusCode = -1;
   String Body = "";
 
+  HttpResponse(int statusCode){
+    StatusCode = statusCode;
+  }
+
   bool IsSuccess() {
-    return StatusCode >= 200 && StatusCode <= 299;
+    return StatusCode >= 200 && StatusCode <= 399;
   }
 };
 

@@ -16,13 +16,14 @@ void setup() {
   WiFiMulti.addAP(ssid, password);
   ConnectToWifi();
   requester = new HttpRequester();
-  requester->Setup("192.168.0.17", 6392);
+  requester->Setup("www.fakestoreapi.com", 443);
 }
 
 void loop() {
   ConnectToWifi();
+  delay(500);
 
-  HttpResponse* getResponse = requester->Get("/api/test/data");
+  HttpResponse* getResponse = requester->Get("/products/1");
   if (getResponse == NULL || !getResponse->IsSuccess()) {
     return;
   }
@@ -36,21 +37,23 @@ void loop() {
     return;
   }
 
-  int value = doc["value"].as<int>();
-
   StaticJsonDocument<200> postBody;
-  postBody["value"] = value + 1;
+  postBody["name"] = "Tenali Ramakrishna";
+  postBody["gender"] = "male";
+  postBody["email"] = "tenali.ramakrishna@15ce.com";
+  postBody["status"] = "active";
+
   String postBodyJson;
   serializeJson(postBody, postBodyJson);
 
-  HttpResponse* postResponse = requester->Post("/api/test/data", postBodyJson, "application/json");
+  HttpResponse* postResponse = requester->Post("/public/v2/users", postBodyJson, "application/json");
   if (postResponse == NULL || !postResponse->IsSuccess()) {
     return;
   }
 
   Serial.println("Body: " + postResponse->Body);
 
-  delay(250);
+  delay(500);
 }
 
 
